@@ -2,3 +2,4 @@ flask
 selenium
 requests
 flask_cors
+bs4
