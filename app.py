@@ -28,7 +28,6 @@ def get_energy_bill():
         # Wait for the page to load and the JavaScript to execute
         driver.implicitly_wait(10)
 
-                
         # Select the "Consumer No." radio button
         consumer_radio_button = driver.find_element(By.ID, "ctl00_cphpwl_rbtAccountNumber")
         consumer_radio_button.click()
@@ -62,20 +61,17 @@ def get_energy_bill():
             "Bill Month": soup.find("span", {"id": "ctl00_cphpwl_lblBillMonth"}).text.strip(),
             "Due Date": soup.find("span", {"id": "ctl00_cphpwl_lblDueDate"}).text.strip(),
             "Bill Amount (Rs.)": soup.find("span", {"id": "ctl00_cphpwl_lblBilledAmount"}).text.strip(),
-            "Amount Payble (Rs.)": soup.find("span", {"id": "ctl00_cphpwl_lblAmountPayble"}).text.strip(),
+            "Amount Payable (Rs.)": soup.find("span", {"id": "ctl00_cphpwl_lblAmountPayble"}).text.strip(),
         }
-
-        # Convert the data to JSON format
-        output_json = json.dumps(data, indent=4)
 
         # Close the browser
         driver.quit()
 
         # Return the JSON response
-        return jsonify({"result": output_json})
+        return jsonify({"result": data})
 
     except Exception as e:
         return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000) 
+    app.run(host='0.0.0.0', port=5000)
