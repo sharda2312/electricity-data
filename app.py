@@ -9,7 +9,7 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-@app.route('/hi', methods=['POST'])
+@app.route('/get', methods=['POST'])
 def get_energy_bill():
     try:
         # Configure Chrome to run in headless mode
