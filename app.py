@@ -1,64 +1,77 @@
 import json
-from flask import Flask, request, jsonify
+from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-@app.route('/scrape_attendance', methods=['POST'])
-def scrape_attendance():
-    # Get JSON input from the POST request
-    data = request.get_json()
+@app.route('/get', methods=['POST'])
+def get_energy_bill():
+    try:
+        # Configure Chrome to run in headless mode
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
 
-    # Extract username and password from the JSON input
-    username = data.get('username')
-    password = data.get('password')
+        # Get consumer_no and office_address_value from the request JSON
+        data = request.json
+        consumer_no = data.get("consumer_no")
+        office_address_value = data.get("office_address_value")
 
-    # Configure Chrome to run in headless mode
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")  # For Linux systems
+        # Create a Selenium webdriver with headless mode
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.get("https://www.jseb.co.in/WSS/WSSUI/frmpwlEnergyBillPayment.aspx")
 
-    # Create a Selenium webdriver with headless mode
-    driver = webdriver.Chrome(options=chrome_options)
-    
-    # Log in to the website
-    login_url = "https://ums.paruluniversity.ac.in/Login.aspx"
-    driver.get(login_url)
+        # Wait for the page to load and the JavaScript to execute
+        driver.implicitly_wait(10)
 
-    username_input = driver.find_element(By.ID, "txtUsername")
-    password_input = driver.find_element(By.ID, "txtPassword")
-    login_button = driver.find_element(By.ID, "btnLogin")
+        # Select the "Consumer No." radio button
+        consumer_radio_button = driver.find_element(By.ID, "ctl00_cphpwl_rbtAccountNumber")
+        consumer_radio_button.click()
 
-    username_input.send_keys(username)
-    password_input.send_keys(password)
-    login_button.click()
+        # Enter the Consumer No. in the input box
+        consumer_input = driver.find_element(By.ID, "ctl00_cphpwl_txtConsumerNumber")
+        consumer_input.send_keys(consumer_no)
 
-    # Wait for the page to load
-    driver.implicitly_wait(10)  # Use implicit wait instead of time.sleep to wait for elements
+        # Select the Office Address from the dropdown menu
+        office_address_dropdown = driver.find_element(By.ID, "ctl00_cphpwl_ddlOfficeAddress")
+        for option in office_address_dropdown.find_elements(By.TAG_NAME, 'option'):
+            if option.get_attribute("value") == office_address_value:
+                option.click()
+                break
 
-    # Visit the attendance page
-    attendance_url = "https://ums.paruluniversity.ac.in/StudentPanel/TTM_Attendance/TTM_Attendance_StudentAttendance.aspx"
-    driver.get(attendance_url)
+        # Click the "Get Bill Details" button using JavaScript
+        driver.execute_script("arguments[0].click();", driver.find_element(By.ID, "ctl00_cphpwl_btnGetBillDetail"))
 
-    # Wait for the attendance data to load (you may need to adjust the wait time)
-    driver.implicitly_wait(10)
+        # Wait for the page to redirect and load
+        WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.ID, "ctl00_cphpwl_lblConsumerName")))
 
-    # Parse the attendance data
-    attendance_element = driver.find_element(By.ID, "ctl00_cphPageContent_lblPresentPCTCount")
-    attendance = attendance_element.text
+        # Extract data from the redirected page
+        page_source = driver.page_source
+        soup = BeautifulSoup(page_source, "html.parser")
 
-    # Create a JSON response
-    attendance_data = {
-        "Attendance": attendance
-    }
+        # Find the required data and store it in a dictionary
+        data = {
+            "Consumer Name": soup.find("span", {"id": "ctl00_cphpwl_lblConsumerName"}).text.strip(),
+            "Bill No.": soup.find("span", {"id": "ctl00_cphpwl_lblBillNo"}).text.strip(),
+            "KNo": soup.find("span", {"id": "ctl00_cphpwl_lblKNo1"}).text.strip(),
+            "Bill Month": soup.find("span", {"id": "ctl00_cphpwl_lblBillMonth"}).text.strip(),
+            "Due Date": soup.find("span", {"id": "ctl00_cphpwl_lblDueDate"}).text.strip(),
+            "Bill Amount (Rs.)": soup.find("span", {"id": "ctl00_cphpwl_lblBilledAmount"}).text.strip(),
+            "Amount Payable (Rs.)": soup.find("span", {"id": "ctl00_cphpwl_lblAmountPayble"}).text.strip(),
+        }
 
-    # Close the browser
-    driver.quit()
+        # Close the browser
+        driver.quit()
 
-    return jsonify(attendance_data)
+        # Return the JSON response
+        return jsonify({"result": data})
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
