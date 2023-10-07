@@ -7,6 +7,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from flask import Flask, request, jsonify
 
+# GITHUB: https://github.com/backpackerdeveloper
+# Linkedin : https://www.linkedin.com/in/shubhamtripz/
+# Made with ♥ by Shubham
+
 app = Flask(__name__)
 
 @app.route('/get', methods=['POST'])
