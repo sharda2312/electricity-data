@@ -17,6 +17,7 @@ app = Flask(__name__)
 def get_energy_bill():
     try:
         # Configure Chrome to run in headless mode
+        # Headless means , run without opening browser
         chrome_options = Options()
         chrome_options.add_argument("--headless")
 
